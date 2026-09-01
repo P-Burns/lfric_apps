@@ -138,7 +138,7 @@ real(kind=r_bl), intent(in)::                                                  &
  rib_surf(tdims%i_start:tdims%i_end,tdims%j_start:tdims%j_end),                &
                                     ! Bulk Richardson number for
                                     ! lowest layer
-sigma_h(tdims%i_start:tdims%i_end,tdims%j_start:tdims%j_end),                  &
+ sigma_h(tdims%i_start:tdims%i_end,tdims%j_start:tdims%j_end),                 &
                                     ! Standard deviation of subgrid
                                     ! orography (m)
  sil_orog_land(land_pts)
@@ -179,7 +179,8 @@ real(kind=r_bl)::                                                              &
                                    ! surface and level 1
   fp_x(land_pts),                                                              &
                                    ! X-component of pressure force
-  fp_y(land_pts)                   ! Y-component of pressure force
+  fp_y(land_pts),                                                              &
+                                   ! Y-component of pressure force             
 
   zdiv_taux(tdims%i_start:tdims%i_end,tdims%j_start:tdims%j_end,bl_levels-1),  &
   zdiv_tauy(tdims%i_start:tdims%i_end,tdims%j_start:tdims%j_end,bl_levels-1)
@@ -207,7 +208,8 @@ real(kind=r_bl)::                                                              &
   tausx,tausy,                                                                 &
                     ! Surface stress
   fp_x_low,fp_y_low,fp_x_steep,fp_y_steep,                                     &
-  rib_fn            ! Richardson number function for stability
+  rib_fn,                                                                      &
+                    ! Richardson number function for stability
                     ! correction to drag
   drag_fac,                                                                    &
                     ! Drag factor in Beljaars scheme
@@ -238,7 +240,7 @@ real(kind=r_bl),parameter:: alpha    = 12.0_r_bl,                              &
                  max_ht_scale  = 300.0_r_bl,                                   &
                                            ! stress profiles
                  min_ht_scale  = 100.0_r_bl,                                   &
-                 pi_squared = pi * pi
+                 pi_squared = pi * pi,                                         &
                                            ! Tunable parameters for Beljaars
                                            ! scheme (see equation 16 in
                                            ! Beljaars et al, 2004):
