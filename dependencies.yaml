@@ -26,8 +26,8 @@ jules:
     ref: 2026.07.1
 
 lfric_apps:
-    source:
-    ref:
+    source: git@github.com:P-Burns/lfric_apps.git
+    ref: beljaars_analytical
 
 lfric_core:
     source: git@github.com:MetOffice/lfric_core.git
