@@ -218,8 +218,20 @@ real(kind=r_bl)::                                                              &
   a1, a2,                                                                      &
                     ! Coefficients computed using variance of terrain in
                     ! Beljaars scheme
-  dz
+  dz,                                                                          &
                     ! distance between theta levels
+
+  I_tmp, I_beljaars,                                                           &
+                    ! objects to hold intermediate and final values of
+                    ! modified variance integral for Beljaars scheme
+  F0_k,                                                                        &
+                    ! Empirical PSD of terrain elevation
+  k_wave,                                                                      &
+                    ! wavenumber for computing Beljaars integral
+  l_w
+                    ! limited lengthscale for Beljaars integral
+                    
+                    
 integer::                                                                      &
   i,                                                                           &
                     ! Loop counter (horizontal field index)
@@ -227,7 +239,14 @@ integer::                                                                      &
                     ! Loop counter (offset within I loop)
   k,                                                                           &
                     ! Loop counter (vertical level index)
-  l             ! Loop counter (horizontal land field index)
+  l,                                                                           &
+                    ! Loop counter (horizontal land field index)
+  kk,                                                                          &
+                    ! Loop counter for modified variance integral
+                    ! of Beljaars scheme
+  Nk
+                    ! Number of wavenumbers in integral for
+                    ! Beljaars scheme
 
 ! Local parameters
       ! Tunable parameters in calculation of explicit orographic stresss
@@ -250,7 +269,14 @@ real(kind=r_bl),parameter:: alpha    = 12.0_r_bl,                              &
                  n1 = -1.9_r_bl,                                               &
                  n2 = -2.8_r_bl,                                               &
                  Ih = 0.00102_r_bl,                                            &
-                 k_flt = 0.00035_r_bl
+                 k_flt = 0.00035_r_bl,                                         &
+
+                 k0 = 0.0002_r_bl,                                             &
+                 k_inf = 0.012_r_bl,                                           &
+                 dk = 0.0001_r_bl
+                                           ! Parameters for integral in
+                                           ! Beljaars scheme
+
 
 integer(kind=jpim), parameter :: zhook_in  = 0
 integer(kind=jpim), parameter :: zhook_out = 1
@@ -273,7 +299,7 @@ end if
 !$OMP PARALLEL DEFAULT(none)                                                   &
 !$OMP private(i,j,l,height_fac,wta,wtb,rib_fn,zeta,tausx,tausy,k,              &
 !$OMP         fp_x_low, fp_y_low,fp_x_steep,fp_y_steep,                        &
-!$OMP         drag_fac,u_mag,a1,a2,dz)                                         &
+!$OMP         drag_fac,u_mag,a1,a2,dz,I_tmp,I_beljaars,F0_k,k_wave,l_w,kk,Nk)  &
 !$OMP SHARED(bl_levels,tdims,tau_fd_x, tau_fd_y,land_pts,land_index,h_m,       &
 !$OMP        k_for_buoy,u_hm,v_hm,tl_hm,qw_hm,rib,z_uv,v_p,fd_stability_dep,   &
 !$OMP        z_tq,tl,qw,db_surf,rib_surf,bt_gb,grcp,g,z0m,fd_hill_option,      &
@@ -493,31 +519,74 @@ if (land_pts > 0) then
   end if ! d_hill_option != multiscale
 
   if (fd_hill_option == multiscale) then
-    !-----------------------------------------------------------------------
-    ! Beljaars et al. (2004) TOFD vertical flux divergence, eqn. (16).
-    !-----------------------------------------------------------------------
-    drag_fac = -alpha * beta * C_md * C_corr
+      !-----------------------------------------------------------------------
+      ! Beljaars et al. (2004) TOFD vertical flux divergence, eqn. (11).
+      !-----------------------------------------------------------------------
+      drag_fac = -2 * alpha * beta * C_md * C_corr
+      Nk = int((k_inf-k0)/dk + 1)
 
 !$OMP do SCHEDULE(STATIC)
-    do k = 1, bl_levels-1
+      do k = 1, bl_levels-1
+        do l = 1, land_pts
+
+          i = land_index_i(l)
+          j = land_index_j(l)
+
+          ! parameters for empirical PSD of elevation
+          ! needed to compute Beljaars integral
+          a1 = sigma_h(i,j)**2 / (Ih * k_flt**n1)
+          a2 = a1 * k1**(n1 - n2)
+
+          ! Compute integral over wavenumbers
+          k_wave = k0
+          I_beljaars = 0
+          do kk = 1, Nk
+            l_w = min(2_r_bl/k_wave, 2_r_bl/k1)
+            if (k_wave <= k1) then
+              F0_k = a1 * k_wave**n1
+            else
+              F0_k = a2 * k_wave**n2
+            end if
+
+            I_tmp = k_wave**2/l_w * F0_k * exp(-z_uv(i,j,k)/l_w) * dk
+            I_beljaars = I_beljaars + I_tmp
+
+            k_wave = k_wave + dk
+          end do
+
+          ! Compute flux divergence on rho points
+          u_mag = sqrt(u_p(i,j,k)**2 + v_p(i,j,k)**2)
+          zdiv_taux(i,j,k) = drag_fac * u_mag * u_p(i,j,k) * I_beljaars
+          zdiv_tauy(i,j,k) = drag_fac * u_mag * v_p(i,j,k) * I_beljaars
+
+        end do ! land_pts
+      end do ! bl_levels
+!$OMP end do
+    end if ! multiscale
+
+    ! Compute stress on theta points by integrating numerically down from
+    ! from bl_level (where fluxes are assumed to vanish)
+
+!$OMP do SCHEDULE(STATIC)
+    do k = bl_levels-1,1,-1
       do l = 1, land_pts
 
         i = land_index_i(l)
         j = land_index_j(l)
 
-        ! Compute flux divergence on rho points
-        u_mag = sqrt(u_p(i,j,k)**2 + v_p(i,j,k)**2)
-        height_fac = exp(-(z_uv(i,j,k)/1500._r_bl)**(1.5_r_bl))
-        a1 = sigma_h(i,j)**2 / (Ih * k_flt**n1)
-        a2 = a1 * k1**(n1 - n2)
-        zdiv_taux(i,j,k) = drag_fac * u_mag * u_p(i,j,k) * 2.109_r_bl          &
-                           * height_fac * a2 * z_uv(i,j,k)**(-1.2_r_bl)
-        zdiv_tauy(i,j,k) = drag_fac * u_mag * v_p(i,j,k) * 2.109_r_bl          &
-                           * height_fac * a2 * z_uv(i,j,k)**(-1.2_r_bl)
+        if (k > 1) then
+          dz = z_tq(i,j,k) - z_tq(i,j,k-1)
+        else
+          dz = z_tq(i,j,k) - 0.0_r_bl
+        end if
+
+        tau_fd_x(i,j,k)=rho_wet_tq(i,j,k)*(tau_fd_x(i,j,k+1)-zdiv_taux(i,j,k)*dz)
+        tau_fd_y(i,j,k)=rho_wet_tq(i,j,k)*(tau_fd_y(i,j,k+1)-zdiv_tauy(i,j,k)*dz)
 
       end do ! land_pts
     end do ! bl_levels
 !$OMP end do
+
   end if ! multiscale
 
 end if ! land_pts > 0
