@@ -180,7 +180,7 @@ real(kind=r_bl)::                                                              &
   fp_x(land_pts),                                                              &
                                    ! X-component of pressure force
   fp_y(land_pts),                                                              &
-                                   ! Y-component of pressure force             
+                                   ! Y-component of pressure force
 
   zdiv_taux(tdims%i_start:tdims%i_end,tdims%j_start:tdims%j_end,bl_levels-1),  &
   zdiv_tauy(tdims%i_start:tdims%i_end,tdims%j_start:tdims%j_end,bl_levels-1)
