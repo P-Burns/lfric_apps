@@ -584,11 +584,9 @@ if (land_pts > 0) then
       end do ! land_pts
     end do ! bl_levels
 !$OMP end do
-
   end if ! multiscale
 
 end if ! land_pts > 0
-
 !$OMP end PARALLEL
 
 if (lhook) call dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
