@@ -518,50 +518,49 @@ if (land_pts > 0) then
   end if ! d_hill_option != multiscale
 
   if (fd_hill_option == multiscale) then
-      !-----------------------------------------------------------------------
-      ! Beljaars et al. (2004) TOFD vertical flux divergence, eqn. (11).
-      !-----------------------------------------------------------------------
-      drag_fac = -2 * alpha * beta * C_md * C_corr
-      Nk = int((k_inf-k0)/dk + 1)
+    !-----------------------------------------------------------------------
+    ! Beljaars et al. (2004) TOFD vertical flux divergence, eqn. (11).
+    !-----------------------------------------------------------------------
+    drag_fac = -2 * alpha * beta * C_md * C_corr
+    Nk = int((k_inf-k0)/dk + 1)
 
 !$OMP do SCHEDULE(STATIC)
-      do k = 1, bl_levels-1
-        do l = 1, land_pts
+    do k = 1, bl_levels-1
+      do l = 1, land_pts
 
-          i = land_index_i(l)
-          j = land_index_j(l)
+        i = land_index_i(l)
+        j = land_index_j(l)
 
-          ! parameters for empirical PSD of elevation
-          ! needed to compute Beljaars integral
-          a1 = sigma_h(i,j)**2 / (Ih * k_flt**n1)
-          a2 = a1 * k1**(n1 - n2)
+        ! parameters for empirical PSD of elevation
+        ! needed to compute Beljaars integral
+        a1 = sigma_h(i,j)**2 / (Ih * k_flt**n1)
+        a2 = a1 * k1**(n1 - n2)
 
-          ! Compute integral over wavenumbers
-          k_wave = k0
-          I_beljaars = 0
-          do kk = 1, Nk
-            l_w = min(2_r_bl/k_wave, 2_r_bl/k1)
-            if (k_wave <= k1) then
-              F0_k = a1 * k_wave**n1
-            else
-              F0_k = a2 * k_wave**n2
-            end if
+        ! Compute integral over wavenumbers
+        k_wave = k0
+        I_beljaars = 0
+        do kk = 1, Nk
+          l_w = min(2_r_bl/k_wave, 2_r_bl/k1)
+          if (k_wave <= k1) then
+            F0_k = a1 * k_wave**n1
+          else
+            F0_k = a2 * k_wave**n2
+          end if
 
-            I_tmp = k_wave**2/l_w * F0_k * exp(-z_uv(i,j,k)/l_w) * dk
-            I_beljaars = I_beljaars + I_tmp
+          I_tmp = k_wave**2/l_w * F0_k * exp(-z_uv(i,j,k)/l_w) * dk
+          I_beljaars = I_beljaars + I_tmp
 
-            k_wave = k_wave + dk
-          end do
+          k_wave = k_wave + dk
+        end do
 
-          ! Compute flux divergence on rho points
-          u_mag = sqrt(u_p(i,j,k)**2 + v_p(i,j,k)**2)
-          zdiv_taux(i,j,k) = drag_fac * u_mag * u_p(i,j,k) * I_beljaars
-          zdiv_tauy(i,j,k) = drag_fac * u_mag * v_p(i,j,k) * I_beljaars
+        ! Compute flux divergence on rho points
+        u_mag = sqrt(u_p(i,j,k)**2 + v_p(i,j,k)**2)
+        zdiv_taux(i,j,k) = drag_fac * u_mag * u_p(i,j,k) * I_beljaars
+        zdiv_tauy(i,j,k) = drag_fac * u_mag * v_p(i,j,k) * I_beljaars
 
-        end do ! land_pts
-      end do ! bl_levels
+      end do ! land_pts
+    end do ! bl_levels
 !$OMP end do
-    end if ! multiscale
 
     ! Compute stress on theta points by integrating numerically down from
     ! from bl_level (where fluxes are assumed to vanish)
