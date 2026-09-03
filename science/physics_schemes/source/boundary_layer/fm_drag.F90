@@ -524,7 +524,6 @@ if (land_pts > 0) then
     drag_fac = -2 * alpha * beta * C_md * C_corr
     Nk = int((k_inf-k0)/dk + 1)
 
-!$OMP do SCHEDULE(STATIC)
     do k = 1, bl_levels-1
       do l = 1, land_pts
 
@@ -560,12 +559,10 @@ if (land_pts > 0) then
 
       end do ! land_pts
     end do ! bl_levels
-!$OMP end do
 
     ! Compute stress on theta points by integrating numerically down from
     ! from bl_level (where fluxes are assumed to vanish)
 
-!$OMP do SCHEDULE(STATIC)
     do k = bl_levels-1,1,-1
       do l = 1, land_pts
 
@@ -585,7 +582,6 @@ if (land_pts > 0) then
 
       end do ! land_pts
     end do ! bl_levels
-!$OMP end do
   end if ! multiscale
 
 end if ! land_pts > 0
