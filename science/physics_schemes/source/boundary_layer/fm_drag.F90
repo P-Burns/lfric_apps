@@ -230,8 +230,7 @@ real(kind=r_bl)::                                                              &
                     ! wavenumber for computing Beljaars integral
   l_w
                     ! limited lengthscale for Beljaars integral
-                    
-                    
+
 integer::                                                                      &
   i,                                                                           &
                     ! Loop counter (horizontal field index)
