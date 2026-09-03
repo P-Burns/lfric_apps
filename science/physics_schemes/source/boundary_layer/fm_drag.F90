@@ -578,8 +578,10 @@ if (land_pts > 0) then
           dz = z_tq(i,j,k) - 0.0_r_bl
         end if
 
-        tau_fd_x(i,j,k)=rho_wet_tq(i,j,k)*(tau_fd_x(i,j,k+1)-zdiv_taux(i,j,k)*dz)
-        tau_fd_y(i,j,k)=rho_wet_tq(i,j,k)*(tau_fd_y(i,j,k+1)-zdiv_tauy(i,j,k)*dz)
+        tau_fd_x(i,j,k)=rho_wet_tq(i,j,k)*                                     &
+                        (tau_fd_x(i,j,k+1)-zdiv_taux(i,j,k)*dz)
+        tau_fd_y(i,j,k)=rho_wet_tq(i,j,k)*                                     &
+                        (tau_fd_y(i,j,k+1)-zdiv_tauy(i,j,k)*dz)
 
       end do ! land_pts
     end do ! bl_levels
