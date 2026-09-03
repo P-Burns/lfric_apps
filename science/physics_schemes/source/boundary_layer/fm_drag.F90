@@ -306,16 +306,16 @@ end if
 !$OMP        orog_drag_param,land_index_i,land_index_j,sigma_h,zdiv_taux,      &
 !$OMP        zdiv_tauy)
 
-!$OMP do SCHEDULE(STATIC)
 do k = 1, bl_levels
+!$OMP do SCHEDULE(STATIC)
   do j = tdims%j_start, tdims%j_end
     do i = tdims%i_start, tdims%i_end
       tau_fd_x(i,j,k) = zero
       tau_fd_y(i,j,k) = zero
     end do
   end do ! land_pts
-end do ! bl_levels
 !$OMP end do
+end do ! bl_levels
 
 ! The rest of the routine is only interested in land points.
 if (land_pts > 0) then
