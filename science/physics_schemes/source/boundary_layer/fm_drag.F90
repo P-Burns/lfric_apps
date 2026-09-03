@@ -499,8 +499,8 @@ if (land_pts > 0) then
     !-----------------------------------------------------------------------
     ! 3. Calculate the vertical profiles of the explicit orographic stress
     !-----------------------------------------------------------------------
-!$OMP do SCHEDULE(STATIC)
     do k = 2, bl_levels
+!$OMP do SCHEDULE(STATIC)
       do l = 1, land_pts
 
         i = land_index_i(l)
@@ -513,8 +513,8 @@ if (land_pts > 0) then
         tau_fd_y(i,j,k) = tau_fd_y(i,j,1)/height_fac
 
       end do ! land_pts
-    end do ! bl_levels
 !$OMP end do
+    end do ! bl_levels
   end if ! d_hill_option != multiscale
 
   if (fd_hill_option == multiscale) then
@@ -525,6 +525,7 @@ if (land_pts > 0) then
     Nk = int((k_inf-k0)/dk + 1)
 
     do k = 1, bl_levels-1
+!$OMP do SCHEDULE(STATIC)
       do l = 1, land_pts
 
         i = land_index_i(l)
@@ -558,12 +559,14 @@ if (land_pts > 0) then
         zdiv_tauy(i,j,k) = drag_fac * u_mag * v_p(i,j,k) * I_beljaars
 
       end do ! land_pts
+!$OMP end do
     end do ! bl_levels
 
     ! Compute stress on theta points by integrating numerically down from
     ! from bl_level (where fluxes are assumed to vanish)
 
     do k = bl_levels-1,1,-1
+!$OMP do SCHEDULE(STATIC)
       do l = 1, land_pts
 
         i = land_index_i(l)
@@ -581,6 +584,7 @@ if (land_pts > 0) then
                         (tau_fd_y(i,j,k+1)-zdiv_tauy(i,j,k)*dz)
 
       end do ! land_pts
+!$OMP end do
     end do ! bl_levels
   end if ! multiscale
 
