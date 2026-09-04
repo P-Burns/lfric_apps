@@ -307,23 +307,27 @@ end if
 !$OMP        zdiv_tauy)
 
 do k = 1, bl_levels
+!$OMP do SCHEDULE(STATIC)
   do j = tdims%j_start, tdims%j_end
     do i = tdims%i_start, tdims%i_end
       tau_fd_x(i,j,k) = zero
       tau_fd_y(i,j,k) = zero
     end do
   end do ! land_pts
+!$OMP end do
 end do ! bl_levels
 
 ! The rest of the routine is only interested in land points.
 if (land_pts > 0) then
 
+!$OMP do SCHEDULE(STATIC)
   do l = 1, land_pts
     j = (land_index(l)-1)/pdims%i_end + 1
     i = land_index(l) - (j-1)*pdims%i_end
     land_index_i(l) = i
     land_index_j(l) = j
   end do ! land_pts
+!$OMP end do
 
   if (fd_hill_option /= multiscale) then
 
@@ -332,6 +336,7 @@ if (land_pts > 0) then
     !    density to this height.
     !----------------------------------------------------------------
 
+!$OMP do SCHEDULE(STATIC)
     do l = 1, land_pts
       h_m(l)=min(max_ht_scale,fd_decay*zh(i,j))
       h_m(l)=max(min_ht_scale,h_m(l))
@@ -342,10 +347,12 @@ if (land_pts > 0) then
       qw_hm(l)=zero
       rib(l)  =zero
     end do ! land_pts
+!$OMP end do
 
     ! Interpolate to get U and V at z=h_m
 
     do k = 2, bl_levels
+!$OMP do SCHEDULE(STATIC)
       do l = 1, land_pts
 
         i = land_index_i(l)
@@ -364,10 +371,12 @@ if (land_pts > 0) then
         end if
 
       end do ! land_pts
+!$OMP end do
     end do ! bl_levels
 
     if ( fd_stability_dep == use_bulk_ri ) then
       do k = 2, bl_levels
+!$OMP do SCHEDULE(STATIC)
         do l = 1, land_pts
           i = land_index_i(l)
           j = land_index_j(l)
@@ -380,8 +389,10 @@ if (land_pts > 0) then
             qw_hm(l) = wta*qw(i,j,k) + wtb*qw(i,j,k-1)
           end if
         end do ! land_pts
+!$OMP end do
       end do ! bl_levels
 
+!$OMP do SCHEDULE(STATIC)
       do l = 1, land_pts
         if (k_for_buoy(l) > 1) then
           k = k_for_buoy(l)
@@ -397,6 +408,7 @@ if (land_pts > 0) then
                         max(1.0e-12_r_bl, (u_hm(l)*u_hm(l)+v_hm(l)*v_hm(l)) )
         end if
       end do ! land_pts
+!$OMP end do
     end if
 
     !-----------------------------------------------------------------------
@@ -404,6 +416,7 @@ if (land_pts > 0) then
     !    at height h_m, the frontal silhouette area and surface roughness
     !    length for momentum, z_0m.
     !-----------------------------------------------------------------------
+!$OMP do SCHEDULE(STATIC)
     do l = 1, land_pts
 
       i = land_index_i(l)
@@ -481,11 +494,13 @@ if (land_pts > 0) then
       tau_fd_y(i,j,1) = fp_y(l)
 
     end do ! land_pts
+!$OMP end do
 
     !-----------------------------------------------------------------------
     ! 3. Calculate the vertical profiles of the explicit orographic stress
     !-----------------------------------------------------------------------
     do k = 2, bl_levels
+!$OMP do SCHEDULE(STATIC)
       do l = 1, land_pts
 
         i = land_index_i(l)
@@ -498,8 +513,9 @@ if (land_pts > 0) then
         tau_fd_y(i,j,k) = tau_fd_y(i,j,1)/height_fac
 
       end do ! land_pts
+!$OMP end do
     end do ! bl_levels
-  end if
+  end if ! d_hill_option != multiscale
 
   if (fd_hill_option == multiscale) then
     !-----------------------------------------------------------------------
@@ -509,6 +525,7 @@ if (land_pts > 0) then
     Nk = int((k_inf-k0)/dk + 1)
 
     do k = 1, bl_levels-1
+!$OMP do SCHEDULE(STATIC)
       do l = 1, land_pts
 
         i = land_index_i(l)
@@ -542,12 +559,14 @@ if (land_pts > 0) then
         zdiv_tauy(i,j,k) = drag_fac * u_mag * v_p(i,j,k) * I_beljaars
 
       end do ! land_pts
+!$OMP end do
     end do ! bl_levels
 
     ! Compute stress on theta points by integrating numerically down from
     ! from bl_level (where fluxes are assumed to vanish)
 
     do k = bl_levels-1,1,-1
+!$OMP do SCHEDULE(STATIC)
       do l = 1, land_pts
 
         i = land_index_i(l)
@@ -565,6 +584,7 @@ if (land_pts > 0) then
                         (tau_fd_y(i,j,k+1)-zdiv_tauy(i,j,k)*dz)
 
       end do ! land_pts
+!$OMP end do
     end do ! bl_levels
   end if ! multiscale
 
