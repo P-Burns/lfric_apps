@@ -306,16 +306,16 @@ end if
 !$OMP        orog_drag_param,land_index_i,land_index_j,sigma_h,zdiv_taux,      &
 !$OMP        zdiv_tauy)
 
-!$OMP do SCHEDULE(STATIC)
 do k = 1, bl_levels
+!$OMP do SCHEDULE(STATIC)
   do j = tdims%j_start, tdims%j_end
     do i = tdims%i_start, tdims%i_end
       tau_fd_x(i,j,k) = zero
       tau_fd_y(i,j,k) = zero
     end do
   end do ! land_pts
-end do ! bl_levels
 !$OMP end do
+end do ! bl_levels
 
 ! The rest of the routine is only interested in land points.
 if (land_pts > 0) then
@@ -499,8 +499,8 @@ if (land_pts > 0) then
     !-----------------------------------------------------------------------
     ! 3. Calculate the vertical profiles of the explicit orographic stress
     !-----------------------------------------------------------------------
-!$OMP do SCHEDULE(STATIC)
     do k = 2, bl_levels
+!$OMP do SCHEDULE(STATIC)
       do l = 1, land_pts
 
         i = land_index_i(l)
@@ -513,61 +513,60 @@ if (land_pts > 0) then
         tau_fd_y(i,j,k) = tau_fd_y(i,j,1)/height_fac
 
       end do ! land_pts
-    end do ! bl_levels
 !$OMP end do
+    end do ! bl_levels
   end if ! d_hill_option != multiscale
 
   if (fd_hill_option == multiscale) then
-      !-----------------------------------------------------------------------
-      ! Beljaars et al. (2004) TOFD vertical flux divergence, eqn. (11).
-      !-----------------------------------------------------------------------
-      drag_fac = -2 * alpha * beta * C_md * C_corr
-      Nk = int((k_inf-k0)/dk + 1)
+    !-----------------------------------------------------------------------
+    ! Beljaars et al. (2004) TOFD vertical flux divergence, eqn. (11).
+    !-----------------------------------------------------------------------
+    drag_fac = -2 * alpha * beta * C_md * C_corr
+    Nk = int((k_inf-k0)/dk + 1)
 
+    do k = 1, bl_levels-1
 !$OMP do SCHEDULE(STATIC)
-      do k = 1, bl_levels-1
-        do l = 1, land_pts
+      do l = 1, land_pts
 
-          i = land_index_i(l)
-          j = land_index_j(l)
+        i = land_index_i(l)
+        j = land_index_j(l)
 
-          ! parameters for empirical PSD of elevation
-          ! needed to compute Beljaars integral
-          a1 = sigma_h(i,j)**2 / (Ih * k_flt**n1)
-          a2 = a1 * k1**(n1 - n2)
+        ! parameters for empirical PSD of elevation
+        ! needed to compute Beljaars integral
+        a1 = sigma_h(i,j)**2 / (Ih * k_flt**n1)
+        a2 = a1 * k1**(n1 - n2)
 
-          ! Compute integral over wavenumbers
-          k_wave = k0
-          I_beljaars = 0
-          do kk = 1, Nk
-            l_w = min(2_r_bl/k_wave, 2_r_bl/k1)
-            if (k_wave <= k1) then
-              F0_k = a1 * k_wave**n1
-            else
-              F0_k = a2 * k_wave**n2
-            end if
+        ! Compute integral over wavenumbers
+        k_wave = k0
+        I_beljaars = 0
+        do kk = 1, Nk
+          l_w = min(2_r_bl/k_wave, 2_r_bl/k1)
+          if (k_wave <= k1) then
+            F0_k = a1 * k_wave**n1
+          else
+            F0_k = a2 * k_wave**n2
+          end if
 
-            I_tmp = k_wave**2/l_w * F0_k * exp(-z_uv(i,j,k)/l_w) * dk
-            I_beljaars = I_beljaars + I_tmp
+          I_tmp = k_wave**2/l_w * F0_k * exp(-z_uv(i,j,k)/l_w) * dk
+          I_beljaars = I_beljaars + I_tmp
 
-            k_wave = k_wave + dk
-          end do
+          k_wave = k_wave + dk
+        end do
 
-          ! Compute flux divergence on rho points
-          u_mag = sqrt(u_p(i,j,k)**2 + v_p(i,j,k)**2)
-          zdiv_taux(i,j,k) = drag_fac * u_mag * u_p(i,j,k) * I_beljaars
-          zdiv_tauy(i,j,k) = drag_fac * u_mag * v_p(i,j,k) * I_beljaars
+        ! Compute flux divergence on rho points
+        u_mag = sqrt(u_p(i,j,k)**2 + v_p(i,j,k)**2)
+        zdiv_taux(i,j,k) = drag_fac * u_mag * u_p(i,j,k) * I_beljaars
+        zdiv_tauy(i,j,k) = drag_fac * u_mag * v_p(i,j,k) * I_beljaars
 
-        end do ! land_pts
-      end do ! bl_levels
+      end do ! land_pts
 !$OMP end do
-    end if ! multiscale
+    end do ! bl_levels
 
     ! Compute stress on theta points by integrating numerically down from
     ! from bl_level (where fluxes are assumed to vanish)
 
-!$OMP do SCHEDULE(STATIC)
     do k = bl_levels-1,1,-1
+!$OMP do SCHEDULE(STATIC)
       do l = 1, land_pts
 
         i = land_index_i(l)
@@ -583,8 +582,8 @@ if (land_pts > 0) then
         tau_fd_y(i,j,k)=rho_wet_tq(i,j,k)*(tau_fd_y(i,j,k+1)-zdiv_tauy(i,j,k)*dz)
 
       end do ! land_pts
-    end do ! bl_levels
 !$OMP end do
+    end do ! bl_levels
 
   end if ! multiscale
 
